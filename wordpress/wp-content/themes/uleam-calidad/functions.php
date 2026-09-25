@@ -57,7 +57,7 @@ function uleam_scripts() {
 		'uleam-style',
 		get_stylesheet_uri(),
 		array( 'uleam-fonts', 'uleam-fontawesome' ),
-		'1.4.4'
+		'1.6.0'
 	);
 	wp_enqueue_script( 'uleam-main', get_template_directory_uri() . '/js/main.js', array(), '1.0.0', true );
 }
@@ -83,6 +83,7 @@ function uleam_icon( $name ) {
 		'location'  => 'fa-solid fa-location-dot',
 		'arrow'     => 'fa-solid fa-arrow-right',
 		'download'  => 'fa-solid fa-download',
+		'calendar'  => 'fa-regular fa-calendar',
 	);
 
 	if ( ! isset( $map[ $name ] ) ) {
@@ -201,8 +202,55 @@ function uleam_register_taxonomies() {
 			'show_in_rest' => true,
 		)
 	);
+	register_taxonomy(
+		'categoria_noticia',
+		'noticia',
+		array(
+			'labels'       => array(
+				'name'          => 'Categorías de noticias',
+				'singular_name' => 'Categoría',
+				'search_items'  => 'Buscar categorías',
+				'all_items'     => 'Todas las categorías',
+				'edit_item'     => 'Editar categoría',
+				'add_new_item'  => 'Añadir categoría',
+			),
+			'hierarchical' => true,
+			'show_in_rest' => true,
+			'rewrite'      => array( 'slug' => 'categoria-noticia' ),
+		)
+	);
 }
 add_action( 'init', 'uleam_register_taxonomies' );
+
+/**
+ * Filtra el archivo de noticias por categoría vía query string.
+ */
+function uleam_noticia_archive_query( $query ) {
+	if ( is_admin() || ! $query->is_main_query() ) {
+		return;
+	}
+	if ( ! $query->is_post_type_archive( 'noticia' ) ) {
+		return;
+	}
+	if ( empty( $_GET['categoria_noticia'] ) ) {
+		return;
+	}
+	$slug = sanitize_title( wp_unslash( $_GET['categoria_noticia'] ) );
+	if ( '' === $slug ) {
+		return;
+	}
+	$query->set(
+		'tax_query',
+		array(
+			array(
+				'taxonomy' => 'categoria_noticia',
+				'field'    => 'slug',
+				'terms'    => $slug,
+			),
+		)
+	);
+}
+add_action( 'pre_get_posts', 'uleam_noticia_archive_query' );
 
 /* -------------------------------------------------------------------------
  * Metabox: URL del archivo del documento
